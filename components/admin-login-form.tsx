@@ -26,7 +26,7 @@ export function AdminLoginForm() {
     setError("")
 
     try {
-      const response = await fetch("/api/auth/login/", {
+      const response = await fetch("/api/login/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -37,7 +37,15 @@ export function AdminLoginForm() {
         }),
       })
 
-      const data = await response.json()
+      let data
+      const contentType = response.headers.get("content-type")
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json()
+      } else {
+        const text = await response.text()
+        console.error("Non-JSON response:", text)
+        throw new Error("Server returned an invalid response. Please check if the Django backend is running.")
+      }
 
       if (response.ok) {
         const user = data.user
@@ -79,7 +87,11 @@ export function AdminLoginForm() {
       }
     } catch (err) {
       console.error("Login error:", err)
-      setError("Network error. Please check your connection and try again.")
+      if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError("Network error. Please ensure the Django backend is running on the correct port.")
+      }
     } finally {
       setIsLoading(false)
     }
