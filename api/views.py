@@ -457,6 +457,13 @@ def register_teacher(request):
             status=status.HTTP_400_BAD_REQUEST
         )
     
+    # Enhanced validation
+    if len(password) < 8:
+        return Response(
+            {'error': 'Password must be at least 8 characters long'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
     # Check if user already exists
     if User.objects.filter(username=username).exists():
         return Response(
@@ -492,6 +499,71 @@ def register_teacher(request):
             {'error': f'Error creating teacher: {str(e)}'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def bulk_register_teachers(request):
+    """
+    Bulk register multiple teachers from CSV data.
+    Only admin users can bulk create teacher accounts.
+    """
+    if not request.user.is_superuser:
+        return Response(
+            {'error': 'Only administrators can bulk register teachers'}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    teachers_data = request.data.get('teachers', [])
+    if not teachers_data:
+        return Response(
+            {'error': 'No teacher data provided'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    created_teachers = []
+    errors = []
+    
+    for teacher_data in teachers_data:
+        try:
+            username = teacher_data.get('username')
+            email = teacher_data.get('email')
+            password = teacher_data.get('password', 'TempPass123!')
+            first_name = teacher_data.get('first_name', '')
+            last_name = teacher_data.get('last_name', '')
+            
+            if not all([username, email]):
+                errors.append(f'Missing required fields for {username or email}')
+                continue
+            
+            if User.objects.filter(username=username).exists():
+                errors.append(f'Username {username} already exists')
+                continue
+                
+            if User.objects.filter(email=email).exists():
+                errors.append(f'Email {email} already exists')
+                continue
+            
+            teacher = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+                is_staff=True,
+                is_active=True
+            )
+            
+            created_teachers.append(UserSerializer(teacher).data)
+            
+        except Exception as e:
+            errors.append(f'Error creating {username}: {str(e)}')
+    
+    return Response({
+        'created_teachers': created_teachers,
+        'created_count': len(created_teachers),
+        'errors': errors,
+        'error_count': len(errors)
+    }, status=status.HTTP_201_CREATED if created_teachers else status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])

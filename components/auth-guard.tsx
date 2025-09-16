@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
@@ -9,6 +8,8 @@ interface User {
   email: string
   role: "admin" | "teacher"
   name: string
+  permissions?: string[]
+  loginTime?: string
 }
 
 interface AuthGuardProps {
@@ -28,7 +29,11 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
       setUser(parsedUser)
 
       if (requiredRole && parsedUser.role !== requiredRole) {
-        router.push("/dashboard")
+        if (parsedUser.role === "admin") {
+          router.push("/admin/dashboard")
+        } else {
+          router.push("/dashboard")
+        }
         return
       }
     } else {
