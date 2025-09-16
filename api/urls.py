@@ -18,6 +18,11 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('profile/', views.user_profile, name='user_profile'),
     
+    # Teacher management endpoints
+    path('teachers/register/', views.register_teacher, name='register_teacher'),
+    path('teachers/', views.list_teachers, name='list_teachers'),
+    path('teachers/<int:teacher_id>/', views.update_teacher, name='update_teacher'),
+    
     # Dashboard
     path('dashboard/stats/', views.dashboard_stats, name='dashboard_stats'),
     

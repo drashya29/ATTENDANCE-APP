@@ -430,3 +430,113 @@ def system_analytics(request):
             {'error': f'Error generating system analytics: {str(e)}'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def register_teacher(request):
+    """
+    Register a new teacher account.
+    Only admin users can create teacher accounts.
+    """
+    if not request.user.is_superuser:
+        return Response(
+            {'error': 'Only administrators can register teachers'}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    username = request.data.get('username')
+    email = request.data.get('email')
+    password = request.data.get('password')
+    first_name = request.data.get('first_name', '')
+    last_name = request.data.get('last_name', '')
+    
+    # Validate required fields
+    if not all([username, email, password]):
+        return Response(
+            {'error': 'Username, email, and password are required'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Check if user already exists
+    if User.objects.filter(username=username).exists():
+        return Response(
+            {'error': f'User with username "{username}" already exists'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if User.objects.filter(email=email).exists():
+        return Response(
+            {'error': f'User with email "{email}" already exists'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        # Create teacher user
+        teacher = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            is_staff=True,  # Teachers need staff permissions
+            is_active=True
+        )
+        
+        return Response({
+            'message': f'Teacher {teacher.username} created successfully',
+            'teacher': UserSerializer(teacher).data
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Error creating teacher: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def list_teachers(request):
+    """Get list of all teachers (staff users)."""
+    teachers = User.objects.filter(is_staff=True, is_active=True).order_by('last_name', 'first_name')
+    serializer = UserSerializer(teachers, many=True)
+    return Response({
+        'teachers': serializer.data,
+        'count': teachers.count()
+    })
+
+@api_view(['PUT', 'PATCH'])
+@permission_classes([permissions.IsAuthenticated])
+def update_teacher(request, teacher_id):
+    """Update teacher information. Only admins or the teacher themselves can update."""
+    try:
+        teacher = User.objects.get(id=teacher_id, is_staff=True)
+    except User.DoesNotExist:
+        return Response({'error': 'Teacher not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Check permissions
+    if not (request.user.is_superuser or request.user.id == teacher.id):
+        return Response(
+            {'error': 'Permission denied'}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    # Update fields
+    teacher.first_name = request.data.get('first_name', teacher.first_name)
+    teacher.last_name = request.data.get('last_name', teacher.last_name)
+    teacher.email = request.data.get('email', teacher.email)
+    
+    # Only admins can change active status
+    if request.user.is_superuser:
+        teacher.is_active = request.data.get('is_active', teacher.is_active)
+    
+    try:
+        teacher.save()
+        return Response({
+            'message': 'Teacher updated successfully',
+            'teacher': UserSerializer(teacher).data
+        })
+    except Exception as e:
+        return Response(
+            {'error': f'Error updating teacher: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
