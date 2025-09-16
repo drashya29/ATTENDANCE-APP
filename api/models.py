@@ -3,7 +3,14 @@ Database models for the attendance system.
 """
 from django.db import models
 from django.contrib.auth.models import User
+from django.conf import settings
 import uuid
+
+if settings.USE_S3:
+    from attendance_system.storage_backends import MediaStorage, PrivateMediaStorage
+    student_photo_storage = MediaStorage()
+else:
+    student_photo_storage = None
 
 class Student(models.Model):
     """Model for storing student information and facial encodings."""
@@ -15,7 +22,12 @@ class Student(models.Model):
     phone = models.CharField(max_length=15, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
     enrollment_date = models.DateField(auto_now_add=True)
-    photo = models.ImageField(upload_to='student_photos/', null=True, blank=True)
+    photo = models.ImageField(
+        upload_to='student_photos/', 
+        null=True, 
+        blank=True,
+        storage=student_photo_storage
+    )
     face_encoding = models.JSONField(null=True, blank=True)  # Store face encoding as JSON
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -30,6 +42,15 @@ class Student(models.Model):
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
+
+    def get_photo_url(self):
+        """Get the full URL for the student photo."""
+        if self.photo:
+            if settings.USE_S3:
+                return self.photo.url
+            else:
+                return f"{settings.MEDIA_URL}{self.photo.name}"
+        return None
 
 class Course(models.Model):
     """Model for storing course information."""
