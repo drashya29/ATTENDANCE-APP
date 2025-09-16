@@ -42,7 +42,7 @@ interface ActivityRecord {
 
 export function DashboardOverview() {
   const [stats, setStats] = useState<AttendanceStats>({
-    totalStudents: 0,
+    totalStudents: 3, // Updated to use consistent student count with student management
     presentToday: 0,
     absentToday: 0,
     totalCourses: 0,
@@ -71,12 +71,16 @@ export function DashboardOverview() {
     }
 
     const updateStats = () => {
+      const totalStudents = 3 // Matches the 3 students in student management
+      const presentToday = Math.floor(Math.random() * 2) + 2 // 2-3 students present
+      const absentToday = totalStudents - presentToday // Remaining students absent
+
       const newStats = {
-        totalStudents: 245,
-        presentToday: Math.floor(Math.random() * 50) + 180,
-        absentToday: Math.floor(Math.random() * 30) + 15,
+        totalStudents,
+        presentToday,
+        absentToday,
         totalCourses: 12,
-        attendanceRate: Math.floor(Math.random() * 15) + 80,
+        attendanceRate: Math.floor((presentToday / totalStudents) * 100),
         liveSessionsActive: Math.floor(Math.random() * 3) + 1,
       }
       setStats(newStats)
@@ -111,18 +115,7 @@ export function DashboardOverview() {
         },
       ]
 
-      const students = [
-        "John Smith",
-        "Sarah Johnson",
-        "Mike Davis",
-        "Emily Brown",
-        "David Wilson",
-        "Lisa Garcia",
-        "James Miller",
-        "Anna Taylor",
-        "Chris Lee",
-        "Maria Rodriguez",
-      ]
+      const students = ["John Smith", "Sarah Johnson", "Mike Davis"]
       const courses = ["CS101", "MATH201", "ENG101", "PHYS101", "CHEM101", "HIST101", "BIO101", "PSYC101"]
 
       if (Math.random() > 0.3) {
