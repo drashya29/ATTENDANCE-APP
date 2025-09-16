@@ -26,41 +26,60 @@ export function AdminLoginForm() {
     setError("")
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const response = await fetch("/api/auth/login/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: email,
+          password: password,
+        }),
+      })
 
-      if (email && password) {
-        let userRole: "admin" | "teacher" = "teacher"
+      const data = await response.json()
 
-        if (loginType === "admin") {
-          // Admin login validation
-          if (email.includes("admin") || email === "admin@school.edu") {
-            userRole = "admin"
-          } else {
-            setError("Invalid admin credentials")
-            setIsLoading(false)
-            return
-          }
+      if (response.ok) {
+        const user = data.user
+        const isAdmin = user.is_superuser
+        const isTeacher = user.is_staff
+
+        if (loginType === "admin" && !isAdmin) {
+          setError("You don't have administrator privileges")
+          setIsLoading(false)
+          return
         }
 
-        // Store enhanced user session
+        if (loginType === "teacher" && !isTeacher) {
+          setError("You don't have teacher privileges")
+          setIsLoading(false)
+          return
+        }
+
+        localStorage.setItem("authToken", data.token)
         localStorage.setItem(
           "user",
           JSON.stringify({
-            email,
-            role: userRole,
-            name: email.split("@")[0],
-            permissions:
-              userRole === "admin" ? ["manage_teachers", "view_all_courses", "system_settings"] : ["manage_courses"],
+            id: user.id,
+            email: user.email,
+            username: user.username,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            role: isAdmin ? "admin" : "teacher",
+            permissions: isAdmin ? ["manage_teachers", "view_all_courses", "system_settings"] : ["manage_courses"],
             loginTime: new Date().toISOString(),
+            isAdmin: isAdmin,
+            isTeacher: isTeacher,
           }),
         )
 
-        router.push(userRole === "admin" ? "/admin/dashboard" : "/dashboard")
+        router.push(isAdmin ? "/admin/dashboard" : "/dashboard")
       } else {
-        setError("Please enter both email and password")
+        setError(data.error || data.non_field_errors?.[0] || "Login failed")
       }
     } catch (err) {
-      setError("Login failed. Please try again.")
+      console.error("Login error:", err)
+      setError("Network error. Please check your connection and try again.")
     } finally {
       setIsLoading(false)
     }
@@ -101,13 +120,13 @@ export function AdminLoginForm() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="admin-email">Admin Email</Label>
+                <Label htmlFor="admin-email">Admin Username/Email</Label>
                 <div className="relative">
                   <Shield className="absolute left-3 top-3 h-4 w-4 text-blue-600" />
                   <Input
                     id="admin-email"
-                    type="email"
-                    placeholder="admin@school.edu"
+                    type="text"
+                    placeholder="admin username or email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10 border-blue-200 focus:border-blue-500"
@@ -150,7 +169,7 @@ export function AdminLoginForm() {
               </Button>
 
               <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-                Demo: Use admin@school.edu with any password
+                Use your Django superuser credentials
               </div>
             </form>
           </TabsContent>
@@ -164,13 +183,13 @@ export function AdminLoginForm() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="teacher-email">Teacher Email</Label>
+                <Label htmlFor="teacher-email">Teacher Username/Email</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-3 h-4 w-4 text-green-600" />
                   <Input
                     id="teacher-email"
-                    type="email"
-                    placeholder="teacher@school.edu"
+                    type="text"
+                    placeholder="teacher username or email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10 border-green-200 focus:border-green-500"
@@ -213,7 +232,7 @@ export function AdminLoginForm() {
               </Button>
 
               <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-                Demo: Use any email/password to login as teacher
+                Use your teacher account credentials
               </div>
             </form>
           </TabsContent>
