@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Search, Users, Clock, MapPin, Edit, Trash2, GraduationCap } from "lucide-react"
+import { EnhancedScheduling } from "./enhanced-scheduling"
 
 interface Course {
   id: string
@@ -448,6 +449,7 @@ export function CourseManagement() {
         <TabsList>
           <TabsTrigger value="courses">Courses</TabsTrigger>
           <TabsTrigger value="classes">Class Sessions</TabsTrigger>
+          <TabsTrigger value="scheduling">Smart Scheduling</TabsTrigger>
         </TabsList>
 
         <TabsContent value="courses" className="space-y-6">
@@ -612,6 +614,10 @@ export function CourseManagement() {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="scheduling" className="space-y-6">
+          <EnhancedScheduling />
         </TabsContent>
       </Tabs>
     </div>
